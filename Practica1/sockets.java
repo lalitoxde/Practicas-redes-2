@@ -5,29 +5,34 @@ import java.io.*;
 import java.net.*;
 
 public class sockets {
-   public static void main(String[] args) {
-     int puerto = 5000;
+    public static void main(String[] args) {
+        int puerto = 5000; 
 
-    try(ServerSocket servidor = new ServerSocket(puerto)){
-    Socket socket = servidor.accept();
-    System.out.println("el cliente se conecto");
+        try (ServerSocket servidor = new ServerSocket(puerto)) {
+            System.out.println("Servidor escuchando en el puerto " + puerto);
 
-    BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            
+            Socket socket = servidor.accept();
+            System.out.println("Cliente conectado");
 
-    PrintWriter salida = new PrintWriter(socket.getOutputStream());
+            
+            BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            
+            PrintWriter salida = new PrintWriter(socket.getOutputStream(), true);
 
-    String mensaje= entrada.readLine();
-    System.out.println("que tranza cliente, recibi tu mensaje");
+           
+            String mensaje = entrada.readLine();
+            System.out.println("mensaje del cliente: " + mensaje);
 
-    socket.close();
+            salida.println("que tranza cliente, recibí tu mensaje.");
 
-
+           
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-    catch(Exception e){
-        System.out.println(e);
-    }
-    }
-   }
+}
 
 
 
