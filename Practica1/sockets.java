@@ -28,6 +28,8 @@ public class sockets {
 
            
             socket.close();
+            entrada.close();
+            salida.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
