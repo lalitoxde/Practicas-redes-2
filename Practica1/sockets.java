@@ -14,7 +14,7 @@ public class sockets {
             
             Socket socket = servidor.accept();
             System.out.println("Cliente conectado");
-
+            
             
             BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             

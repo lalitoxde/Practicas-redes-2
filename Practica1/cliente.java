@@ -18,11 +18,13 @@ public class cliente {
 
           
             salida.println("que tranza servidor, soy cliente");
-
+            salida.flush();
            
             String respuesta = entrada.readLine();
             System.out.println("Servidor dice: " + respuesta);
-
+            socket.close();
+            entrada.close();
+            salida.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
