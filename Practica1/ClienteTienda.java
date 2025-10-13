@@ -3,7 +3,7 @@ package Practica1;
 import java.io.*;
 import java.net.*;
 
-public class cliente {
+public class ClienteTienda {
     public static void main(String[] args) {
         String host = "localhost"; 
         int puerto = 5000;

@@ -4,7 +4,7 @@ package Practica1;
 import java.io.*;
 import java.net.*;
 
-public class sockets {
+public class ServidorTienda {
     public static void main(String[] args) {
         int puerto = 5000; 
 
