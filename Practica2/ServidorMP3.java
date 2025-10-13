@@ -45,7 +45,7 @@ public class ServidorMP3 {
 
         // --- 1. PREPARACIÓN DEL ARCHIVO MP3 ---
         // Define la ruta del archivo MP3 que se va a transmitir.
-        Path rutaCancion = Paths.get("Instant Crush.mp3");
+        Path rutaCancion = Paths.get("Practica2/Instant Crush.mp3");
         // Lee el archivo completo en un único arreglo de bytes.
         byte[] archivoBytes = Files.readAllBytes(rutaCancion);
         // Crea una lista para almacenar los objetos AudioPacket.
