@@ -10,13 +10,15 @@ package Practica2;
  * @author Lenovo
  */
 import java.io.*;
-import java.net.*; // Esta es tu caja de herramientas para todo lo relacionado con redes (Network).
-import java.nio.file.Files;//Esta es otra clase "ayudante" que te da un montón de herramientas para operar sobre archivos.
-import java.nio.file.Path;//Representa la ruta o ubicación de un archivo o directorio de una manera moderna y flexible.
-import java.nio.file.Paths;//Es una clase "ayudante" o "fábrica" cuyo único propósito es crear objetos Path.
+import java.net.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Representa el programa Servidor para la transmisión de un archivo MP3.
@@ -35,6 +37,18 @@ public class ServidorMP3 {
     /** El tamaño de la ventana deslizante (K). El número de paquetes que se pueden enviar sin recibir confirmación. */
     private static final int TAMANO_VENTANA = 10;
 
+    // Configuración de canciones disponibles
+    private static final String CARPETA_AUDIOS = "Practica2/";
+    private static final Map<String, String> CANCIONES = new HashMap<>();
+    
+    static {
+        // Inicializar lista de canciones disponibles
+        CANCIONES.put("1", "Instant Crush.mp3");
+        CANCIONES.put("2", "megalovania.mp3");
+        CANCIONES.put("3", "float.mp3");
+        CANCIONES.put("4", "jijija.mp3");
+    }
+
     /**
      * Método principal que inicia el servidor.
      * @param args Argumentos de la línea de comandos (no se usan).
@@ -42,27 +56,7 @@ public class ServidorMP3 {
      */
     public static void main(String[] args) throws IOException {
         System.out.println("Iniciando servidor...");
-
-        // --- 1. PREPARACIÓN DEL ARCHIVO MP3 ---
-        // Define la ruta del archivo MP3 que se va a transmitir.
-        Path rutaCancion = Paths.get("Practica2/Instant Crush.mp3");
-        // Lee el archivo completo en un único arreglo de bytes.
-        byte[] archivoBytes = Files.readAllBytes(rutaCancion);
-        // Crea una lista para almacenar los objetos AudioPacket.
-        List<AudioPacket> paquetes = new ArrayList<>();
-        long seqNum = 0; // Contador para el número de secuencia.
-        // Bucle para dividir el arreglo de bytes en trozos más pequeños.
-        for (int i = 0; i < archivoBytes.length; i += TAMANO_PAQUETE) {
-            // Calcula el final del trozo actual, asegurando que no se pase del final del archivo.
-            int fin = Math.min(i + TAMANO_PAQUETE, archivoBytes.length);
-            // Copia el fragmento del archivo en un nuevo arreglo de bytes.
-            byte[] datosPaquete = Arrays.copyOfRange(archivoBytes, i, fin);
-            // Determina si este es el último paquete de la secuencia.
-            boolean esUltimo = (fin == archivoBytes.length);
-            // Crea un nuevo objeto AudioPacket y lo agrega a la lista.
-            paquetes.add(new AudioPacket(seqNum++, datosPaquete, esUltimo));
-        }
-        System.out.println("Archivo MP3 cargado y dividido en " + paquetes.size() + " paquetes.");
+        System.out.println("Canciones disponibles: " + CANCIONES.values());
 
         // Abre un socket UDP en el puerto especificado para la comunicación.
         DatagramSocket socketServidor = new DatagramSocket(PUERTO);
@@ -75,10 +69,49 @@ public class ServidorMP3 {
             DatagramPacket paqueteInicio = new DatagramPacket(bufferRecepcion, bufferRecepcion.length);
             // Esta línea es "bloqueante": el programa se detiene aquí hasta que recibe un paquete.
             socketServidor.receive(paqueteInicio);
+            
+            // ---1. DETECTAR CANCIÓN SOLICITADA ---
+            String mensaje = new String(paqueteInicio.getData(), 0, paqueteInicio.getLength());       
+            String nombreArchivo;
+            if (mensaje.startsWith("INICIAR:")) {
+                String cancionSolicitada = mensaje.substring(8).trim();
+                nombreArchivo = CARPETA_AUDIOS + cancionSolicitada;
+                System.out.println("El cliente quiere reproducir: " + cancionSolicitada);
+            } else {
+                System.err.println("No se reconoció la petición del cliente.");
+                continue;
+            }
+
             // Guarda la dirección IP y el puerto del cliente para poder enviarle paquetes de vuelta.
             InetAddress direccionCliente = paqueteInicio.getAddress();
             int puertoCliente = paqueteInicio.getPort();
-            System.out.println("Cliente conectado. Iniciando transmisión de la canción...");
+            System.out.println("Cliente conectado. Iniciando transmisión de: " + nombreArchivo);
+
+            // --- 1.1 PREPARACIÓN DEL ARCHIVO MP3 ---
+            // Define la ruta del archivo MP3 que se va a transmitir.
+            Path rutaCancion = Paths.get(nombreArchivo);
+            if (!Files.exists(rutaCancion)) {
+                System.err.println("No se encontró el archivo");
+                continue;
+            }
+            
+            // Lee el archivo completo en un único arreglo de bytes.
+            byte[] archivoBytes = Files.readAllBytes(rutaCancion);
+            // Crea una lista para almacenar los objetos AudioPacket.
+            List<AudioPacket> paquetes = new ArrayList<>();
+            long seqNum = 0; // Contador para el número de secuencia.
+            // Bucle para dividir el arreglo de bytes en trozos más pequeños.
+            for (int i = 0; i < archivoBytes.length; i += TAMANO_PAQUETE) {
+                // Calcula el final del trozo actual, asegurando que no se pase del final del archivo.
+                int fin = Math.min(i + TAMANO_PAQUETE, archivoBytes.length);
+                // Copia el fragmento del archivo en un nuevo arreglo de bytes.
+                byte[] datosPaquete = Arrays.copyOfRange(archivoBytes, i, fin);
+                // Determina si este es el último paquete de la secuencia.
+                boolean esUltimo = (fin == archivoBytes.length);
+                // Crea un nuevo objeto AudioPacket y lo agrega a la lista.
+                paquetes.add(new AudioPacket(seqNum++, datosPaquete, esUltimo));
+            }
+            System.out.println("Archivo MP3 cargado y dividido en " + paquetes.size() + " paquetes.");
 
             // --- 2. LÓGICA DE VENTANA DESLIZANTE Y GO-BACK-N ---
             int baseVentana = 0; // El número de secuencia del paquete más antiguo no confirmado.
@@ -137,8 +170,5 @@ public class ServidorMP3 {
         }
     }
 }
-
-
-
 
 

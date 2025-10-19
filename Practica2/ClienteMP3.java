@@ -15,6 +15,7 @@ import javazoom.jl.player.Player;
 import java.io.*;
 // Importa las clases para la comunicación por red, como Sockets y Paquetes de Datagramas.
 import java.net.*;
+import java.util.Scanner;
 
 /**
  * Representa el programa Cliente que se conecta al ServidorMP3.
@@ -28,7 +29,6 @@ public class ClienteMP3 {
 
     /** El puerto en el que el servidor está escuchando. Debe coincidir con el del servidor. */
     private static final int PUERTO_SERVIDOR = 9876;
-    /** La dirección del servidor. "localhost" significa que está en la misma máquina. */
     private static final String HOST_SERVIDOR = "localhost";
     /**
      * El tiempo máximo en milisegundos que el cliente esperará por un paquete.
@@ -40,20 +40,48 @@ public class ClienteMP3 {
      * Método principal que inicia el cliente.
      * @param args Argumentos de la línea de comandos (no se usan).
      * @throws IOException Si ocurre un error de red.
-     */
+     */   
+    private static final String[] CANCIONES = {
+        "Instant Crush.mp3",
+        "megalovania.mp3",
+        "float.mp3",
+        "jijija.mp3"
+    };
+
     public static void main(String[] args) throws IOException {
-        // Crea un socket UDP para la comunicación del cliente.
+        Scanner scanner = new Scanner(System.in);
+        
+        System.out.println("=== Spotify_pobre ===");
+        System.out.println("Canciones a escuchar:");
+        for (int i = 0; i < CANCIONES.length; i++) {
+            System.out.println((i + 1) + ". " + CANCIONES[i]);
+        }
+        System.out.print("Selecciona una canción (1-" + CANCIONES.length + "): ");
+        
+        int seleccion = scanner.nextInt();
+        if (seleccion < 1 || seleccion > CANCIONES.length) {
+            System.err.println("Selección inválida");
+            return;
+        }
+        
+        String cancionSeleccionada = CANCIONES[seleccion - 1];
+        System.out.println("Reproduciendo: " + cancionSeleccionada);
+        
+        seleccion(cancionSeleccionada);
+    }
+
+    public static void seleccion(String cancionSeleccionada) throws IOException {
         DatagramSocket socketCliente = new DatagramSocket();
-        // Obtiene la dirección IP del servidor a partir de su nombre de host.
         InetAddress direccionServidor = InetAddress.getByName(HOST_SERVIDOR);
 
         // --- INICIO DE LA COMUNICACIÓN ---
         // Envía una señal de "INICIAR" al servidor para indicarle que está listo para recibir la canción.
-        byte[] datosInicio = "INICIAR".getBytes();
+        String mensajeInicio = "INICIAR:" + cancionSeleccionada;
+        byte[] datosInicio = mensajeInicio.getBytes();
         DatagramPacket paqueteInicio = new DatagramPacket(datosInicio, datosInicio.length, direccionServidor, PUERTO_SERVIDOR);
         socketCliente.send(paqueteInicio);
         System.out.println("Conectado al servidor. Esperando datos de la canción...");
-
+        
         // --- VARIABLES DE ESTADO ---
         long proximoPaqueteEsperado = 0; // Contador para saber qué número de paquete se espera recibir.
         boolean transmisionTerminada = false; // Bandera para controlar el fin del bucle principal.
