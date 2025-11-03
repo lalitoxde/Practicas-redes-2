@@ -1,0 +1,58 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "ClienteTienda",
+            "request": "launch",
+            "mainClass": "Practica1.ClienteTienda",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
+            "name": "ServidorTienda",
+            "request": "launch",
+            "mainClass": "Practica1.ServidorTienda",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
+            "name": "ClienteMP3",
+            "request": "launch",
+            "mainClass": "Practica2.ClienteMP3",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
+            "name": "ServidorMP3",
+            "request": "launch",
+            "mainClass": "Practica2.ServidorMP3",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
+            "name": "Cliente",
+            "request": "launch",
+            "mainClass": "Practica3.Cliente",
+            "projectName": "Practicas-redes-2_3d8d17ba",
+            "vmArgs": "-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
+        },
+        {
+            "type": "java",
+            "name": "Servidor",
+            "request": "launch",
+            "mainClass": "Practica3.Servidor",
+            "projectName": "Practicas-redes-2_3d8d17ba",
+            "vmArgs": "-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"
+        }
+    ]
+}
