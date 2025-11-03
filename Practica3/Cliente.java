@@ -45,7 +45,7 @@ public class Cliente {
             System.out.println("Comandos:");
             System.out.println(">/stickers para ver stickers disponibles");
             System.out.println(">/quit para ver salir del chat");
-            System.out.println(">/usuario' para ver stickers disponibles");
+            System.out.println(">/usuario para cambiar nombre de usuario");
 
             // Hilo para recibir mensajes
             new Thread(() -> {
