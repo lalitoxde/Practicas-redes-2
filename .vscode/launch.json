@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "ChatClient",
+            "request": "launch",
+            "mainClass": "Practica3.ChatClient",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
+            "name": "ChatServer",
+            "request": "launch",
+            "mainClass": "Practica3.ChatServer",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}"

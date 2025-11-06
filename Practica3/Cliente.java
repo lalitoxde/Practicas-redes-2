@@ -56,7 +56,7 @@ public class Cliente {
                     while (true) {
                         socket.receive(packet);
                         String mensaje = new String(packet.getData(), 0, packet.getLength());
-                        System.out.println("\n" + mensaje + "\n> ");
+                        System.out.println(mensaje);
                     }
                 } catch (Exception e) {
                     System.out.println("Conexión cerrada");
