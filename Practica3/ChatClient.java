@@ -1,165 +1,92 @@
 package Practica3;
 
-import java.io.*;
 import java.net.*;
 import java.util.*;
 
 public class ChatClient {
-    private DatagramSocket socket;
-    private InetAddress serverAddress;
-    private int serverPort;
-    private String username;
-    private String currentRoom;
-    private boolean running;
+    private static final int PORT = 12345;
+    private static final String HOST = "localhost";
+    private static final Map<String, String> STICKERS = new HashMap<>();
 
-    public ChatClient(String serverHost, int serverPort, String username) throws IOException {
-        this.socket = new DatagramSocket();
-        this.serverAddress = InetAddress.getByName(serverHost);
-        this.serverPort = serverPort;
-        this.username = username;
-        this.currentRoom = "general";
-        this.running = true;
+    static {
+        // Stickers con emojis Unicode
+        STICKERS.put(":gato:", "🐱");
+        STICKERS.put(":perro:", "🐶");
+        STICKERS.put(":corazon:", "❤️");
+        STICKERS.put(":carafeliz:", "😊");
 
-        // Unirse a la sala general automáticamente
-        joinRoom("general");
-    }
-
-    public void joinRoom(String roomName) {
-        sendMessage("JOIN:" + username + ":" + roomName + ":");
-        this.currentRoom = roomName;
-    }
-
-    public void createRoom(String roomName) {
-        sendMessage("CREATE:" + username + ":" + roomName + ":");
-    }
-
-    public void sendChatMessage(String content) {
-        sendMessage("MSG:" + username + ":" + currentRoom + ":" + content);
-    }
-
-    public void listRooms() {
-        sendMessage("LIST:" + username + "::");
-    }
-
-    public void leaveRoom() {
-        sendMessage("LEAVE:" + username + ":" + currentRoom + ":");
-        this.currentRoom = "general";
-    }
-
-    private void sendMessage(String message) {
-        try {
-            byte[] data = message.getBytes();
-            DatagramPacket packet = new DatagramPacket(data, data.length, serverAddress, serverPort);
-            socket.send(packet);
-        } catch (IOException e) {
-            System.err.println("Error enviando mensaje: " + e.getMessage());
-        }
-    }
-
-    public void startReceiver() {
-        Thread receiverThread = new Thread(() -> {
-            while (running) {
-                try {
-                    byte[] buffer = new byte[1024];
-                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                    socket.receive(packet);
-
-                    String message = new String(packet.getData(), 0, packet.getLength());
-                    displayMessage(message);
-
-                } catch (IOException e) {
-                    if (running) {
-                        System.err.println("Error recibiendo mensaje: " + e.getMessage());
-                    }
-                }
-            }
-        });
-        receiverThread.start();
-    }
-
-    private void displayMessage(String message) {
-        String[] parts = message.split(":", 4);
-        String type = parts[0]; // tipo (MSG, ERROR, SUCCESS, SYSTEM, LIST)
-        String sender = parts[1];
-        String room = parts[2];
-        String content = parts.length > 3 ? parts[3] : "";
-
-        switch (type) {
-            case "ERROR":
-                System.out.println("Error: " + content);
-                break;
-            case "SUCCESS":
-                System.out.println("* " + content + " *");
-                break;
-            case "SYSTEM":
-                System.out.println("* " + content + " *");
-                break;
-            case "LIST":
-                System.out.println("Salas disponibles:");
-                String[] rooms = content.split(",");
-                for (String roomInfo : rooms) {
-                    if (!roomInfo.isEmpty()) {
-                        System.out.println("   - " + roomInfo);
-                    }
-                }
-                break;
-            case "MSG":
-                System.out.println(sender + ": " + content);
-                break;
-            default:
-                System.out.println("Mensaje desconocido: " + message);
-        }
-    }
-
-    public void stop() {
-        running = false;
-        socket.close();
+        // Stickers con arte ASCII
+        STICKERS.put(":cohete:",
+                "   /\\\n" +
+                        "  /  \\\n" +
+                        " /____\\\n" +
+                        "|      |\n" +
+                        "|  🚀  |");
     }
 
     public static void main(String[] args) {
         try {
+            DatagramSocket socket = new DatagramSocket();
             Scanner scanner = new Scanner(System.in);
-            System.out.print("Ingresa tu nombre de usuario: ");
-            String username = scanner.nextLine();
 
-            ChatClient client = new ChatClient("localhost", 8888, username);
-            client.startReceiver();
+            System.out.println("Chat iniciado. Comandos disponibles:");
+            System.out.println("/stickers - Ver lista de stickers");
+            System.out.println("/quit - Salir");
 
-            System.out.println("=== Chat UDP ===");
-            System.out.println("Comandos disponibles:");
-            System.out.println("/join <sala> - Unirse a una sala");
-            System.out.println("/create <sala> - Crear una nueva sala");
-            System.out.println("/list - Listar salas disponibles");
-            System.out.println("/leave - Salir de la sala actual");
-            System.out.println("/exit - Salir del chat");
-            System.out.println("Escribe tu mensaje...");
+            // Hilo para recibir mensajes
+            new Thread(() -> {
+                try {
+                    byte[] buffer = new byte[1024];
+                    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
+                    while (true) {
+                        socket.receive(packet);
+                        String mensaje = new String(packet.getData(), 0, packet.getLength());
+                        System.out.println("\n" + procesarStickers(mensaje) + "\n> ");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }).start();
+
+            // Envío de mensajes
             while (true) {
+                System.out.print("> ");
                 String input = scanner.nextLine();
 
-                if ("/exit".equalsIgnoreCase(input)) {
+                if (input.equals("/quit")) {
                     break;
-                } else if (input.startsWith("/join ")) {
-                    String room = input.substring(6);
-                    client.joinRoom(room);
-                } else if (input.startsWith("/create ")) {
-                    String room = input.substring(8);
-                    client.createRoom(room);
-                } else if ("/list".equalsIgnoreCase(input)) {
-                    client.listRooms();
-                } else if ("/leave".equalsIgnoreCase(input)) {
-                    client.leaveRoom();
-                } else {
-                    client.sendChatMessage(input);
+                } else if (input.equals("/stickers")) {
+                    mostrarStickers();
+                    continue;
                 }
+
+                byte[] data = input.getBytes();
+                DatagramPacket packet = new DatagramPacket(
+                        data, data.length, InetAddress.getByName(HOST), PORT);
+                socket.send(packet);
             }
 
-            client.stop();
+            socket.close();
             scanner.close();
-            System.out.println("Chat finalizado.");
 
-        } catch (IOException e) {
-            System.err.println("Error iniciando cliente: " + e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private static String procesarStickers(String mensaje) {
+        for (Map.Entry<String, String> entry : STICKERS.entrySet()) {
+            mensaje = mensaje.replace(entry.getKey(), entry.getValue());
+        }
+        return mensaje;
+    }
+
+    private static void mostrarStickers() {
+        System.out.println("\n--- STICKERS DISPONIBLES ---");
+        for (String key : STICKERS.keySet()) {
+            System.out.println(key + " → " + STICKERS.get(key));
+        }
+        System.out.println("----------------------------\n");
     }
 }

@@ -24,6 +24,28 @@ public class ChatRoom {
         System.out.println(username + " dejó la sala: " + name);
     }
 
+    public String getListaUsuarios() {
+        if (users.isEmpty()) {
+            return "No hay usuarios en la sala";
+        }
+        StringBuilder lista = new StringBuilder("Usuarios en la sala (" + users.size() + "): ");
+        for (String usuario : users.keySet()) {
+            lista.append(usuario).append(", ");
+        }
+
+        // Quitar la última coma y espacio
+        if (lista.length() > 2) {
+            lista.setLength(lista.length() - 2);
+        }
+
+        return lista.toString();
+    }
+
+    // Método para obtener solo los nombres de usuarios (para notificaciones)
+    public List<String> getNombresUsuarios() {
+        return new ArrayList<>(users.keySet());
+    }
+
     public void broadcast(String message, InetAddress excludeAddress, int excludePort, DatagramSocket socket) {
         for (Map.Entry<String, InetSocketAddress> entry : users.entrySet()) {
             InetSocketAddress userAddress = entry.getValue();

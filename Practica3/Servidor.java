@@ -16,14 +16,13 @@ public class Servidor {
         this.Salas = new ConcurrentHashMap<>();
         // Crear sala general por defecto
         Salas.put("Lobby_Principal", new ChatRoom("Lobby_Principal"));
+        System.out.println("Servidor de chat iniciado en puerto " + PORT);
     }
 
     public static void main(String[] args) {
         try {
-            // DatagramSocket socket = new DatagramSocket(PORT);
-            System.out.println("Servidor de chat iniciado en puerto " + PORT);
             System.out.println("Esperando conexiones...");
-            ChatServer server = new ChatServer();
+            Servidor server = new Servidor();
             server.start();
 
         } catch (Exception e) {
@@ -88,20 +87,21 @@ public class Servidor {
                 sendError(address, port, "La sala '" + nomSala + "' no existe");
                 return;
             }
-
+            ChatRoom salaDestino = Salas.get(nomSala);
             // Verificar y remover usuario de otras salas
-            for (ChatRoom room : Salas.values()) {
-                if (room.containsUser(usuario)) {
-                    room.salidaUsuario(usuario);
+            for (ChatRoom sala : Salas.values()) {
+                if (sala.containsUser(usuario)) {
+                    sala.salidaUsuario(usuario);
+                    notificacionUsuarios(sala.getName(), sala.getListaUsuarios());
                 }
             }
 
             // Agregar usuario a la nueva sala
-            Salas.get(nomSala).addUsuario(usuario, address, port);
+            salaDestino.addUsuario(usuario, address, port);
             sendSuccess(address, port, "Te uniste a la sala: " + nomSala);
-
+            notificacionUsuarios(nomSala, usuario + " se unió a la sala. ");
             // Notificar a otros usuarios
-            notificacionUsuarios(nomSala, usuario + " se unió a la sala");
+            notificacionUsuarios(nomSala, salaDestino.getListaUsuarios());
         }
     }
 
@@ -146,9 +146,23 @@ public class Servidor {
         ChatRoom room = Salas.get(nomSala);
         if (room != null) {
             room.salidaUsuario(usuario);
-            notificacionUsuarios(nomSala, usuario + " dejó la sala");
-            sendSuccess(address, port, "Saliste de la sala: " + nomSala);
+            // notificacionUsuarios(nomSala, room.getListaUsuarios());
+            ChatRoom salaGeneral = Salas.get("Lobby_Principal");
+            if (salaGeneral != null && !salaGeneral.containsUser(usuario)) {
+                salaGeneral.addUsuario(usuario, address, port);
+
+                // Enviar mensaje de éxito
+                sendSuccess(address, port, "Saliste de " + nomSala + " y fuiste redirigido al Lobby");
+                String listaUsuarios = salaGeneral.getListaUsuarios();
+                mensajeServidor(address, port, "SYSTEM:::" + listaUsuarios);
+
+                // Notificar a los demás en la sala general
+                notificacionUsuarios("general", usuario + " se unió a la sala");
+            }
+            notificacionUsuarios(nomSala, usuario + " dejó la sala " + nomSala);
+            notificacionUsuarios(nomSala, room.getListaUsuarios());
         }
+
     }
 
     private void notificacionUsuarios(String nomSala, String content) {
