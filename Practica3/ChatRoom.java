@@ -28,7 +28,7 @@ public class ChatRoom {
         if (users.isEmpty()) {
             return "No hay usuarios en la sala";
         }
-        StringBuilder lista = new StringBuilder("Usuarios en la sala (" + users.size() + "): ");
+        StringBuilder lista = new StringBuilder("Usuarios en la sala ->" + name + "<- (" + users.size() + "): ");
         for (String usuario : users.keySet()) {
             lista.append(usuario).append(", ");
         }
@@ -66,6 +66,36 @@ public class ChatRoom {
                 System.err.println("Error enviando mensaje a " + entry.getKey() + ": " + e.getMessage());
             }
         }
+    }
+
+    public void msgPrivado(String message, String targetUsername, DatagramSocket socket) {
+        InetSocketAddress targetAddress = users.get(targetUsername);
+        if (targetAddress != null) {
+            try {
+                byte[] data = message.getBytes();
+                DatagramPacket packet = new DatagramPacket(data, data.length,
+                        targetAddress.getAddress(), targetAddress.getPort());
+                socket.send(packet);
+                System.out.println("Mensaje privado enviado a " + targetUsername + ": ");
+            } catch (IOException e) {
+                System.err.println("Error enviando mensaje privado a " + targetUsername + ": " + e.getMessage());
+            }
+        } else {
+            System.err.println("Usuario " + targetUsername + " no encontrado en la sala");
+        }
+    }
+
+    // Método para listar usuarios en la sala
+    public String getUserList() {
+        StringBuilder userList = new StringBuilder();
+        for (String username : users.keySet()) {
+            userList.append(username).append(",");
+        }
+        return userList.toString();
+    }
+
+    public boolean userExists(String username) {
+        return users.containsKey(username);
     }
 
     public int getUserCount() {

@@ -63,10 +63,11 @@ public class Cliente {
             System.out.println("=== Discord para pobres ===");
             System.out.println("Bienvenido " + usuario + " disfruta del chat!\n");
             System.out.println("Lista de comandos:");
-            System.out.println("/entrar nombreSala -> Unirse a una sala");
-            System.out.println("/crear nombreSala -> Crear una nueva sala");
+            System.out.println("/entrar <nombreSala> -> Unirse a una sala");
+            System.out.println("/crear <nombreSala> -> Crear una nueva sala");
             System.out.println("/listar -> Lista las salas disponibles");
             System.out.println("/stickers -> Lista de los stickers disponibles");
+            System.out.println("#priv <usuarioDestino> <mensaje> -> Envia mensajes privados");
             System.out.println("/salir -> Salir de la sala actual");
             System.out.println("/exit -> Salir del chat");
             System.out.println("Envia un mensaje");
@@ -89,6 +90,13 @@ public class Cliente {
                 } else if ("/stickers".equalsIgnoreCase(input)) {
                     mostrarStickers();
                     continue;
+                } else if (input.startsWith("#priv ")) {
+                    String[] privParts = input.substring(6).split(" ", 2);
+                    if (privParts.length == 2) {
+                        comCliente.sendmsgPrivado(privParts[0], privParts[1]);
+                    } else {
+                        System.out.println("Formato: #priv <usuario> <mensaje>");
+                    }
                 } else {
                     comCliente.enviarMensajeChat(input);
                 }
@@ -115,6 +123,12 @@ public class Cliente {
     public void enviarMensajeChat(String content) {
         String mensajeCompleto = procesarStickers(content);
         señalServidor("MSG:" + usuario + ":" + sala + ":" + mensajeCompleto);
+    }
+
+    public void sendmsgPrivado(String targetUsername, String mensaje) {
+        String mensajeCompleto = procesarStickers(mensaje);
+        String msg = targetUsername + ":" + mensajeCompleto;
+        señalServidor("msgPrivado:" + usuario + ":" + sala + ":" + msg);
     }
 
     public void listaSalas() {
@@ -185,6 +199,9 @@ public class Cliente {
                 break;
             case "MSG":
                 System.out.println(sender + ": " + content);
+                break;
+            case "PRIVATE":
+                System.out.println("PRIVADO " + sender + ": " + content);
                 break;
             default:
                 System.out.println("Mensaje desconocido: " + mensaje);

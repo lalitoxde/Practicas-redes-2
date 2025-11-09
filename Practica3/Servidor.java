@@ -73,6 +73,9 @@ public class Servidor {
             case "ListarSalas":
                 listSalas(packet.getAddress(), packet.getPort());
                 break;
+            case "msgPrivado":
+                sendmsgPrivado(usuario, nomSala, msg, packet.getAddress(), packet.getPort());
+                break;
             case "Salir":
                 salir(usuario, nomSala, packet.getAddress(), packet.getPort());
                 break;
@@ -132,6 +135,42 @@ public class Servidor {
         }
     }
 
+    private void sendmsgPrivado(String senderUsername, String nomSala, String data,
+            InetAddress senderAddress, int senderPort) {
+        // Formato de data: "targetUsername:mensaje"
+        String[] privateParts = data.split(":", 2);
+        if (privateParts.length < 2) {
+            sendError(senderAddress, senderPort, "Formato incorrecto. Usa: #priv <usuario> <mensaje>");
+            return;
+        }
+
+        String targetUsername = privateParts[0];
+        String privateMessage = privateParts[1];
+
+        ChatRoom room = Salas.get(nomSala);
+        if (room == null) {
+            sendError(senderAddress, senderPort, "No estás en ninguna sala");
+            return;
+        }
+
+        if (!room.userExists(targetUsername)) {
+            sendError(senderAddress, senderPort, "Usuario '" + targetUsername + "' no encontrado en la sala");
+            return;
+        }
+
+        if (senderUsername.equals(targetUsername)) {
+            sendError(senderAddress, senderPort, "No puedes enviarte mensajes a ti mismo");
+            return;
+        }
+
+        // Enviar mensaje privado al destinatario
+        String formatoMsgPriv = "PRIVATE:" + senderUsername + ":" + nomSala + ":" + privateMessage;
+        room.msgPrivado(formatoMsgPriv, targetUsername, socket);
+
+        // Confirmar al remitente que se envió
+        sendSuccess(senderAddress, senderPort, "Mensaje privado enviado a " + targetUsername);
+    }
+
     private void listSalas(InetAddress address, int port) {
         StringBuilder roomList = new StringBuilder("");
         for (String nomSala : Salas.keySet()) {
@@ -153,11 +192,12 @@ public class Servidor {
 
                 // Enviar mensaje de éxito
                 sendSuccess(address, port, "Saliste de " + nomSala + " y fuiste redirigido al Lobby");
-                String listaUsuarios = salaGeneral.getListaUsuarios();
-                mensajeServidor(address, port, "SYSTEM:::" + listaUsuarios);
+                // String listaUsuarios = salaGeneral.getListaUsuarios();
+                // mensajeServidor(address, port, "SYSTEM:::" + listaUsuarios);
 
                 // Notificar a los demás en la sala general
-                notificacionUsuarios("general", usuario + " se unió a la sala");
+                notificacionUsuarios("Lobby_Principal", usuario + " se unió a la sala");
+                notificacionUsuarios("Lobby_Principal", salaGeneral.getListaUsuarios());
             }
             notificacionUsuarios(nomSala, usuario + " dejó la sala " + nomSala);
             notificacionUsuarios(nomSala, room.getListaUsuarios());
