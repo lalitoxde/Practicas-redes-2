@@ -1,20 +1,22 @@
 package Practica3;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.*;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.sound.sampled.AudioPermission;
+
 public class Servidor {
     private static final int PORT = 12345;
     private DatagramSocket socket;
-    // private static Set<InetSocketAddress> clientes = new HashSet<>();
     private Map<String, ChatRoom> Salas;
+    private Map<String, AudioPermission> sesionesAudio; // Para reconstruir audio
 
     public Servidor() throws SocketException {
         this.socket = new DatagramSocket(PORT);
         this.Salas = new ConcurrentHashMap<>();
-        // Crear sala general por defecto
+        this.sesionesAudio = new ConcurrentHashMap<>();
         Salas.put("Lobby_Principal", new ChatRoom("Lobby_Principal"));
         System.out.println("Servidor de chat iniciado en puerto " + PORT);
     }
@@ -33,12 +35,11 @@ public class Servidor {
     public void start() {
         while (true) {
             try {
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[2048];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
                 socket.receive(packet);
 
-                // Verificamos el tipo de petición del usuario
-                peticionMensaje(packet);
+                procesarPaquete(packet);
 
             } catch (IOException e) {
                 System.err.println("Error: " + e.getMessage());
@@ -46,9 +47,105 @@ public class Servidor {
         }
     }
 
+    private void procesarPaquete(DatagramPacket packet) {
+        byte[] data = packet.getData();
+        int length = packet.getLength();
+
+        if (length > 0 && data[0] == 1) { // Paquete de audio grabado
+            procesarAudioGrabado(packet);
+        } else {
+            peticionMensaje(packet);
+        }
+    }
+
+    private void procesarAudioGrabado(DatagramPacket packet) {
+        try {
+            ByteArrayInputStream bais = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
+            DataInputStream dis = new DataInputStream(bais);
+
+            byte tipo = dis.readByte();
+            String usuario = dis.readUTF();
+            String sala = dis.readUTF();
+            boolean esPrivado = dis.readBoolean();
+            String targetUser = dis.readUTF();
+            int seqNum = dis.readInt();
+            int totalPaquetes = dis.readInt();
+            int dataLength = dis.readInt();
+
+            // Verificar integridad
+            if (usuario == null || sala == null) {
+                System.err.println("❌ Cabecera de audio corrupta");
+                return;
+            }
+
+            // Reconstruir paquete
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
+
+            dos.writeByte(tipo);
+            dos.writeUTF(usuario);
+            dos.writeUTF(sala);
+            dos.writeBoolean(esPrivado);
+            dos.writeUTF(targetUser);
+            dos.writeInt(seqNum);
+            dos.writeInt(totalPaquetes);
+            dos.writeInt(dataLength);
+
+            if (dataLength > 0) {
+                byte[] audioData = new byte[dataLength];
+                dis.readFully(audioData);
+                dos.write(audioData, 0, dataLength);
+            }
+
+            byte[] fullPacket = baos.toByteArray();
+
+            // Enrutamiento
+            if (esPrivado) {
+                enviarAudioPrivado(fullPacket, usuario, targetUser, sala);
+            } else {
+                ChatRoom room = Salas.get(sala);
+                if (room != null) {
+                    room.broadcastAudio(fullPacket, packet.getAddress(), packet.getPort(), socket);
+                    System.out.println("🔊 Audio grabado de " + usuario + " en " + sala + " (paquete " + seqNum + "/"
+                            + totalPaquetes + ")");
+                } else {
+                    System.err.println("❌ Sala " + sala + " no encontrada");
+                }
+            }
+
+            // Enviar ACK (simulado)
+            enviarACK(usuario, seqNum, packet.getAddress(), packet.getPort());
+
+        } catch (IOException e) {
+            System.err.println("❌ Error procesando audio grabado: " + e.getMessage());
+        }
+    }
+
+    private void enviarACK(String usuario, int seqNum, InetAddress address, int port) {
+        try {
+            String ack = "ACK:" + usuario + "::" + seqNum;
+            byte[] data = ack.getBytes();
+            DatagramPacket packet = new DatagramPacket(data, data.length, address, port);
+            socket.send(packet);
+        } catch (IOException e) {
+            System.err.println("❌ Error enviando ACK: " + e.getMessage());
+        }
+    }
+
+    private void enviarAudioPrivado(byte[] audioPacket, String sender, String targetUser, String sala) {
+        ChatRoom room = Salas.get(sala);
+        if (room != null && room.userExists(targetUser)) {
+            room.msgPrivadoAudio(audioPacket, targetUser, socket);
+            System.out.println("🔒 Audio privado de " + sender + " para " + targetUser + " en " + sala);
+        } else {
+            System.err.println("❌ Usuario " + targetUser + " no encontrado para audio privado");
+        }
+    }
+
+    // ... (los demás métodos existentes se mantienen igual) ...
     private void peticionMensaje(DatagramPacket packet) {
         String mensaje = new String(packet.getData(), 0, packet.getLength());
-        String[] estructuraMsg = mensaje.split(":", 4); // formato: peticion:Nombre:Sala:mensaje
+        String[] estructuraMsg = mensaje.split(":", 4);
 
         if (estructuraMsg.length < 3) {
             sendError(packet.getAddress(), packet.getPort(), "Mensaje inválido");
@@ -91,7 +188,6 @@ public class Servidor {
                 return;
             }
             ChatRoom salaDestino = Salas.get(nomSala);
-            // Verificar y remover usuario de otras salas
             for (ChatRoom sala : Salas.values()) {
                 if (sala.containsUser(usuario)) {
                     sala.salidaUsuario(usuario);
@@ -99,11 +195,9 @@ public class Servidor {
                 }
             }
 
-            // Agregar usuario a la nueva sala
             salaDestino.addUsuario(usuario, address, port);
             sendSuccess(address, port, "Te uniste a la sala: " + nomSala);
             notificacionUsuarios(nomSala, usuario + " se unió a la sala. ");
-            // Notificar a otros usuarios
             notificacionUsuarios(nomSala, salaDestino.getListaUsuarios());
         }
     }
@@ -117,9 +211,6 @@ public class Servidor {
 
             Salas.put(nomSala, new ChatRoom(nomSala));
             sendSuccess(address, port, "Sala creada: " + nomSala);
-
-            // Unir automáticamente al usuario a la nueva sala
-            // joinSala(usuario, nomSala, address, port);
         }
     }
 
@@ -137,7 +228,6 @@ public class Servidor {
 
     private void sendmsgPrivado(String senderUsername, String nomSala, String data,
             InetAddress senderAddress, int senderPort) {
-        // Formato de data: "targetUsername:mensaje"
         String[] privateParts = data.split(":", 2);
         if (privateParts.length < 2) {
             sendError(senderAddress, senderPort, "Formato incorrecto. Usa: #priv <usuario> <mensaje>");
@@ -163,11 +253,8 @@ public class Servidor {
             return;
         }
 
-        // Enviar mensaje privado al destinatario
         String formatoMsgPriv = "PRIVATE:" + senderUsername + ":" + nomSala + ":" + privateMessage;
         room.msgPrivado(formatoMsgPriv, targetUsername, socket);
-
-        // Confirmar al remitente que se envió
         sendSuccess(senderAddress, senderPort, "Mensaje privado enviado a " + targetUsername);
     }
 
@@ -185,24 +272,16 @@ public class Servidor {
         ChatRoom room = Salas.get(nomSala);
         if (room != null) {
             room.salidaUsuario(usuario);
-            // notificacionUsuarios(nomSala, room.getListaUsuarios());
             ChatRoom salaGeneral = Salas.get("Lobby_Principal");
             if (salaGeneral != null && !salaGeneral.containsUser(usuario)) {
                 salaGeneral.addUsuario(usuario, address, port);
-
-                // Enviar mensaje de éxito
                 sendSuccess(address, port, "Saliste de " + nomSala + " y fuiste redirigido al Lobby");
-                // String listaUsuarios = salaGeneral.getListaUsuarios();
-                // mensajeServidor(address, port, "SYSTEM:::" + listaUsuarios);
-
-                // Notificar a los demás en la sala general
                 notificacionUsuarios("Lobby_Principal", usuario + " se unió a la sala");
                 notificacionUsuarios("Lobby_Principal", salaGeneral.getListaUsuarios());
             }
             notificacionUsuarios(nomSala, usuario + " dejó la sala " + nomSala);
             notificacionUsuarios(nomSala, room.getListaUsuarios());
         }
-
     }
 
     private void notificacionUsuarios(String nomSala, String content) {
