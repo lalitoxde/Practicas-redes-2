@@ -74,7 +74,7 @@ public class Servidor {
 
             // Verificar integridad
             if (usuario == null || sala == null) {
-                System.err.println("❌ Cabecera de audio corrupta");
+                System.err.println("Cabecera de audio corrupta");
                 return;
             }
 
@@ -106,10 +106,10 @@ public class Servidor {
                 ChatRoom room = Salas.get(sala);
                 if (room != null) {
                     room.broadcastAudio(fullPacket, packet.getAddress(), packet.getPort(), socket);
-                    System.out.println("🔊 Audio grabado de " + usuario + " en " + sala + " (paquete " + seqNum + "/"
+                    System.out.println("Audio grabado de " + usuario + " en " + sala + " (paquete " + seqNum + "/"
                             + totalPaquetes + ")");
                 } else {
-                    System.err.println("❌ Sala " + sala + " no encontrada");
+                    System.err.println("Sala " + sala + " no encontrada");
                 }
             }
 
@@ -117,7 +117,7 @@ public class Servidor {
             enviarACK(usuario, seqNum, packet.getAddress(), packet.getPort());
 
         } catch (IOException e) {
-            System.err.println("❌ Error procesando audio grabado: " + e.getMessage());
+            System.err.println("Error procesando audio grabado: " + e.getMessage());
         }
     }
 
@@ -128,7 +128,7 @@ public class Servidor {
             DatagramPacket packet = new DatagramPacket(data, data.length, address, port);
             socket.send(packet);
         } catch (IOException e) {
-            System.err.println("❌ Error enviando ACK: " + e.getMessage());
+            System.err.println("Error enviando ACK: " + e.getMessage());
         }
     }
 
@@ -136,13 +136,12 @@ public class Servidor {
         ChatRoom room = Salas.get(sala);
         if (room != null && room.userExists(targetUser)) {
             room.msgPrivadoAudio(audioPacket, targetUser, socket);
-            System.out.println("🔒 Audio privado de " + sender + " para " + targetUser + " en " + sala);
+            System.out.println("Audio privado de " + sender + " para " + targetUser + " en " + sala);
         } else {
-            System.err.println("❌ Usuario " + targetUser + " no encontrado para audio privado");
+            System.err.println("Usuario " + targetUser + " no encontrado para audio privado");
         }
     }
 
-    // ... (los demás métodos existentes se mantienen igual) ...
     private void peticionMensaje(DatagramPacket packet) {
         String mensaje = new String(packet.getData(), 0, packet.getLength());
         String[] estructuraMsg = mensaje.split(":", 4);
@@ -270,17 +269,45 @@ public class Servidor {
 
     private void salir(String usuario, String nomSala, InetAddress address, int port) {
         ChatRoom room = Salas.get(nomSala);
+
         if (room != null) {
-            room.salidaUsuario(usuario);
-            ChatRoom salaGeneral = Salas.get("Lobby_Principal");
-            if (salaGeneral != null && !salaGeneral.containsUser(usuario)) {
-                salaGeneral.addUsuario(usuario, address, port);
-                sendSuccess(address, port, "Saliste de " + nomSala + " y fuiste redirigido al Lobby");
-                notificacionUsuarios("Lobby_Principal", usuario + " se unió a la sala");
-                notificacionUsuarios("Lobby_Principal", salaGeneral.getListaUsuarios());
+            // Si el usuario está en el Lobby Principal, salir completamente del servidor
+            if ("Lobby_Principal".equals(nomSala)) {
+                synchronized (Salas) {
+                    for (ChatRoom sala : Salas.values()) {
+                        if (sala.containsUser(usuario)) {
+                            sala.salidaUsuario(usuario);
+                            // Notificar solo si no es el Lobby Principal (para evitar notificación
+                            // duplicada)
+                            if (!sala.getName().equals("Lobby_Principal")) {
+                                notificacionUsuarios(sala.getName(), usuario + " dejó la sala");
+                                notificacionUsuarios(sala.getName(), sala.getListaUsuarios());
+                            }
+                        }
+                    }
+                }
+                notificacionUsuarios("Lobby_Principal", usuario + " ha salido del servidor");
+                notificacionUsuarios("Lobby_Principal", room.getListaUsuarios());
+
+                // sendSuccess(address, port, "EXIT_SERVER:Has salido del servidor. Conexión
+                // terminada.");
+                System.out.println("Usuario '" + usuario + "' ha salido completamente del servidor");
+
+            } else {
+                // Si está en otra sala, moverlo al Lobby Principal
+                room.salidaUsuario(usuario);
+
+                ChatRoom salaGeneral = Salas.get("Lobby_Principal");
+                if (salaGeneral != null) {
+                    salaGeneral.addUsuario(usuario, address, port);
+                    sendSuccess(address, port, "Saliste de " + nomSala + " y fuiste redirigido al Lobby Principal");
+                    notificacionUsuarios("Lobby_Principal", usuario + " se unió a la sala");
+                    notificacionUsuarios("Lobby_Principal", salaGeneral.getListaUsuarios());
+                }
+
+                notificacionUsuarios(nomSala, usuario + " dejó la sala " + nomSala);
+                notificacionUsuarios(nomSala, room.getListaUsuarios());
             }
-            notificacionUsuarios(nomSala, usuario + " dejó la sala " + nomSala);
-            notificacionUsuarios(nomSala, room.getListaUsuarios());
         }
     }
 
