@@ -91,26 +91,29 @@ public class Cliente {
             System.out.println("=== Discord para pobres ===");
             System.out.println("Bienvenido " + usuario + " disfruta del chat!\n");
             System.out.println("Lista de comandos:");
+            System.out.println("------------------SALAS------------------");
             System.out.println("/entrar <nombreSala> -> Unirse a una sala");
             System.out.println("/crear <nombreSala> -> Crear una nueva sala");
             System.out.println("/listar -> Lista las salas disponibles");
+            System.out.println("------------------MENSAJES------------------");
             System.out.println("/stickers -> Lista de los stickers disponibles");
             System.out.println("#priv <usuarioDestino> <mensaje> -> Envia mensajes privados");
+            System.out.println("------------------AUDIOS------------------");
             System.out.println("/audio -> Grabar 5 segundos de audio");
             System.out.println("/reproducirAudio -> Reproducir audio grabado localmente");
             System.out.println("/enviar_audio_sala -> Enviar audio grabado a la SALA");
-            System.out.println("#enviar_audio_priv <usuario> -> Enviar audio grabado PRIVADO");
-            System.out.println("#escucharAudios -> Ver lista de audios PRIVADOS");
-            System.out.println("#reproducir_audio <numero> -> Reproducir un audio grabado PRIVADO");
-            System.out.println("#limpiarAudios -> Quitar audios PRIVADOS de la lista");
-            System.out.println("/salir -> Salir de la sala actual");
-            System.out.println("/exit -> Salir del chat");
-
-            // NUEVOS COMANDOS PARA MÚLTIPLES AUDIOS
             System.out.println("/listar_audios -> Mostrar todos los audios grabados");
             System.out.println("/seleccionar_audio <numero> -> Seleccionar un audio específico");
             System.out.println("/eliminar_audio <numero> -> Eliminar un audio grabado");
             System.out.println("/limpiar_audios_locales -> Eliminar todos los audios grabados");
+            System.out.println("------------------AUDIOS_PRIVADOS------------------");
+            System.out.println("#enviar_audio_priv <usuario> -> Enviar audio grabado PRIVADO");
+            System.out.println("#escucharAudios -> Ver lista de audios PRIVADOS");
+            System.out.println("#reproducir_audio <numero> -> Reproducir un audio grabado PRIVADO");
+            System.out.println("#limpiarAudios -> Quitar audios PRIVADOS de la lista");
+            System.out.println("-------------------GENERAL------------------");
+            System.out.println("/salir -> Salir de la sala actual");
+            System.out.println("/exit -> Salir del chat");
             System.out.println("Envia un mensaje");
 
             while (true) {
@@ -154,8 +157,6 @@ public class Cliente {
                     comCliente.reproducirAudioPrivado(numeroAudio);
                 } else if ("#limpiarAudios".equalsIgnoreCase(input)) {
                     comCliente.limpiarAudiosPrivados();
-
-                    // NUEVOS COMANDOS PARA MÚLTIPLES AUDIOS
                 } else if ("/listar_audios".equalsIgnoreCase(input)) {
                     comCliente.listarAudiosGrabados();
                 } else if (input.startsWith("/seleccionar_audio ")) {
@@ -214,9 +215,13 @@ public class Cliente {
             audiosGrabados.add(nuevoAudio);
             audioActualIndex = audiosGrabados.size() - 1;
 
-            System.out.println("✅ Audio #" + (audioActualIndex + 1) + " grabado: " + nuevoAudio.length + " bytes");
-            System.out.println("📊 Total de audios grabados: " + audiosGrabados.size());
-            System.out.println("Usa /reproducirAudio para escuchar el último o /enviar_audio_sala para compartir");
+            System.out.println("Audio #" + (audioActualIndex + 1) + " grabado: " + nuevoAudio.length + " bytes");
+            System.out.println("Total de audios grabados: " + audiosGrabados.size());
+            System.out.println("Usa los diferentes comandos para enviar, reproducir o ver los audios.");
+            System.out.println(
+                    "O puedes usar #enviar_audio_priv <nombre_del_usuario_destino> para enviar por privado el audio.");
+            System.out.println(
+                    "Recordatorio: Si tienes múltiples audios, lista los audios y/o seleccionalos para poder elegir cual usar.");
 
         } catch (LineUnavailableException e) {
             System.err.println("Error accediendo al micrófono: " + e.getMessage());
@@ -255,7 +260,7 @@ public class Cliente {
 
         // Si hay múltiples audios y ninguno está seleccionado, mostrar la lista
         if (audiosGrabados.size() > 1 && audioActualIndex == -1) {
-            System.out.println("📢 Tienes múltiples audios grabados. Selecciona uno:");
+            System.out.println("Tienes múltiples audios grabados. Selecciona uno:");
             listarAudiosGrabados();
             System.out.println("Usa: /seleccionar_audio <número> y luego vuelve a enviar");
             return;
@@ -263,7 +268,7 @@ public class Cliente {
 
         byte[] audioParaEnviar = getAudioActual();
 
-        System.out.println("🎵 Enviando audio #" + (getIndiceAudioActual() + 1) + " de " + audiosGrabados.size() +
+        System.out.println("Enviando audio #" + (getIndiceAudioActual() + 1) + " de " + audiosGrabados.size() +
                 (esPrivado ? " (PRIVADO para " + targetUser + ")" : " (SALA " + sala + ")"));
         System.out.println("   Tamaño: " + audioParaEnviar.length + " bytes");
 
@@ -279,7 +284,7 @@ public class Cliente {
             return;
         }
 
-        System.out.println("\n🎧 AUDIOS GRABADOS:");
+        System.out.println("\nAUDIOS GRABADOS:");
         System.out.println("══════════════════════════════");
         for (int i = 0; i < audiosGrabados.size(); i++) {
             byte[] audio = audiosGrabados.get(i);
@@ -296,7 +301,7 @@ public class Cliente {
             int numero = Integer.parseInt(numeroStr) - 1;
             if (numero >= 0 && numero < audiosGrabados.size()) {
                 audioActualIndex = numero;
-                System.out.println("✅ Audio #" + (numero + 1) + " seleccionado");
+                System.out.println("Audio #" + (numero + 1) + " seleccionado");
             } else {
                 System.out.println("Número de audio inválido. Usa /listar_audios para ver la lista.");
             }
@@ -315,7 +320,7 @@ public class Cliente {
                 } else if (audioActualIndex > numero) {
                     audioActualIndex--;
                 }
-                System.out.println("🗑️ Audio #" + (numero + 1) + " eliminado");
+                System.out.println("Audio #" + (numero + 1) + " eliminado");
             } else {
                 System.out.println("Número de audio inválido. Usa /listar_audios para ver la lista.");
             }
@@ -328,7 +333,7 @@ public class Cliente {
         int cantidad = audiosGrabados.size();
         audiosGrabados.clear();
         audioActualIndex = -1;
-        System.out.println("🗑️ " + cantidad + " audios eliminados");
+        System.out.println(cantidad + " audios eliminados");
     }
 
     // Métodos auxiliares para audio
@@ -617,7 +622,7 @@ public class Cliente {
             return;
         }
 
-        System.out.println("\n🎧 AUDIOS PRIVADOS COMPLETOS:");
+        System.out.println("\nAUDIOS PRIVADOS COMPLETOS:");
         System.out.println("══════════════════════════════");
 
         int index = 1;
@@ -671,7 +676,7 @@ public class Cliente {
             String remitente = remitentesCompletos.get(numero);
             List<byte[]> paquetesAudio = listaPaquetesCompletos.get(numero);
 
-            System.out.println("🔊 Reproduciendo audio privado de " + remitente + "...");
+            System.out.println("Reproduciendo audio privado de " + remitente + "...");
 
             // Combinar todos los paquetes en un solo audio
             int totalBytes = paquetesAudio.stream().mapToInt(p -> p.length).sum();
@@ -687,7 +692,7 @@ public class Cliente {
             System.out.println("   Tamaño del audio: " + audioData.length + " bytes");
 
             reproducirAudioInmediato(audioData);
-            System.out.println("✅ Audio reproducido completamente");
+            System.out.println("Audio reproducido completamente");
 
         } catch (NumberFormatException e) {
             System.out.println("Número inválido. Usa: #reproducir_audio <número>");
@@ -701,7 +706,7 @@ public class Cliente {
         int cantidad = audiosPrivadosRecibidos.size();
         audiosPrivadosRecibidos.clear();
         remitentesAudiosPrivados.clear();
-        System.out.println("🗑️ " + cantidad + " audios privados eliminados");
+        System.out.println(cantidad + " audios privados eliminados");
     }
 
     // ========== MÉTODOS EXISTENTES DEL CHAT ==========
