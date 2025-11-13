@@ -20,11 +20,8 @@ public class Cliente {
     private AudioFormat audioFormat;
     private TargetDataLine targetDataLine;
     private SourceDataLine sourceDataLine;
-
-    // MÚLTIPLES AUDIOS - REEMPLAZO DE LAS VARIABLES VIEJAS
     private List<byte[]> audiosGrabados = new ArrayList<>();
     private int audioActualIndex = -1;
-
     private static final int DURACION_GRABACION = 5; // segundos
     private static final int SAMPLE_RATE = 16000;
     private static final int PACKET_SIZE = 512;
