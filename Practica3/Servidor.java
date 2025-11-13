@@ -273,12 +273,11 @@ public class Servidor {
         if (room != null) {
             // Si el usuario está en el Lobby Principal, salir completamente del servidor
             if ("Lobby_Principal".equals(nomSala)) {
+                // Remover al usuario de todas las salas
                 synchronized (Salas) {
                     for (ChatRoom sala : Salas.values()) {
                         if (sala.containsUser(usuario)) {
                             sala.salidaUsuario(usuario);
-                            // Notificar solo si no es el Lobby Principal (para evitar notificación
-                            // duplicada)
                             if (!sala.getName().equals("Lobby_Principal")) {
                                 notificacionUsuarios(sala.getName(), usuario + " dejó la sala");
                                 notificacionUsuarios(sala.getName(), sala.getListaUsuarios());
@@ -286,12 +285,14 @@ public class Servidor {
                         }
                     }
                 }
-                notificacionUsuarios("Lobby_Principal", usuario + " ha salido del servidor");
-                notificacionUsuarios("Lobby_Principal", room.getListaUsuarios());
 
-                // sendSuccess(address, port, "EXIT_SERVER:Has salido del servidor. Conexión
-                // terminada.");
-                System.out.println("Usuario '" + usuario + "' ha salido completamente del servidor");
+                // Enviar comando especial para que el cliente se cierre
+                String exitCommand = "EXIT:" + usuario
+                        + ":Lobby_Principal:Has salido del servidor. Cerrando aplicación...";
+                mensajeServidor(address, port, exitCommand);
+                // Notificar al Lobby Principal que el usuario salió del servidor
+                notificacionUsuarios("Lobby_Principal", usuario + " ha salido del CHAT.");
+                notificacionUsuarios("Lobby_Principal", room.getListaUsuarios());
 
             } else {
                 // Si está en otra sala, moverlo al Lobby Principal

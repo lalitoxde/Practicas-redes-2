@@ -113,15 +113,12 @@ public class Cliente {
             System.out.println("#limpiarAudios -> Quitar audios PRIVADOS de la lista");
             System.out.println("-------------------GENERAL------------------");
             System.out.println("/salir -> Salir de la sala actual");
-            System.out.println("/exit -> Salir del chat");
             System.out.println("Envia un mensaje");
 
             while (true) {
                 String input = scanner.nextLine();
 
-                if ("/exit".equalsIgnoreCase(input)) {
-                    break;
-                } else if (input.startsWith("/entrar ")) {
+                if (input.startsWith("/entrar ")) {
                     String salaSelec = input.substring(8);
                     comCliente.joinSala(salaSelec);
                 } else if (input.startsWith("/crear ")) {
@@ -173,9 +170,9 @@ public class Cliente {
                 }
             }
 
-            comCliente.stop();
-            scanner.close();
-            System.out.println("Sala finalizada. Hasta pronto!");
+            // comCliente.stop();
+            // scanner.close();
+            // System.out.println("Sala finalizada. Hasta pronto!");
 
         } catch (IOException e) {
             System.err.println("Error iniciando cliente: " + e.getMessage());
@@ -270,7 +267,7 @@ public class Cliente {
 
         System.out.println("Enviando audio #" + (getIndiceAudioActual() + 1) + " de " + audiosGrabados.size() +
                 (esPrivado ? " (PRIVADO para " + targetUser + ")" : " (SALA " + sala + ")"));
-        System.out.println("   Tamaño: " + audioParaEnviar.length + " bytes");
+        // System.out.println(" Tamaño: " + audioParaEnviar.length + " bytes");
 
         // Dividir audio en paquetes y enviar con Go-Back-N
         dividirYEnviarAudio(audioParaEnviar, esPrivado, targetUser);
@@ -288,7 +285,7 @@ public class Cliente {
         System.out.println("══════════════════════════════");
         for (int i = 0; i < audiosGrabados.size(); i++) {
             byte[] audio = audiosGrabados.get(i);
-            String seleccionado = (i == audioActualIndex) ? " ✅ ACTUAL" : "";
+            String seleccionado = (i == audioActualIndex) ? " ACTUAL" : "";
             System.out.println((i + 1) + ". Audio - " + audio.length + " bytes" + seleccionado);
         }
         System.out.println("══════════════════════════════");
@@ -355,8 +352,6 @@ public class Cliente {
         return audioActualIndex;
     }
 
-    // ========== MÉTODOS EXISTENTES (sin cambios mayores) ==========
-
     private void dividirYEnviarAudio(byte[] audioData, boolean esPrivado, String targetUser) {
         // Limpiar estado anterior
         paquetesPorEnviar.clear();
@@ -366,7 +361,8 @@ public class Cliente {
 
         // Dividir audio en paquetes
         int totalPaquetes = (int) Math.ceil((double) audioData.length / PACKET_SIZE);
-        System.out.println("Dividiendo audio en " + totalPaquetes + " paquetes...");
+        // ------------------->> System.out.println("Dividiendo audio en " +
+        // totalPaquetes + " paquetes...");
 
         // Crear paquetes
         for (int i = 0; i < totalPaquetes; i++) {
@@ -409,7 +405,8 @@ public class Cliente {
 
     private void iniciarTransmisionGoBackN(int totalPaquetes) {
         Thread transmisionThread = new Thread(() -> {
-            System.out.println("Iniciando transmisión Go-Back-N (Ventana: " + WINDOW_SIZE + ")");
+            // System.out.println("Iniciando transmisión Go-Back-N (Ventana: " + WINDOW_SIZE
+            // + ")");
 
             Timer timeoutTimer = new Timer();
             final boolean[] timeoutActivo = { false };
@@ -519,8 +516,6 @@ public class Cliente {
         }
     }
 
-    // ========== MÉTODOS DE AUDIO PRIVADO (sin cambios) ==========
-
     private void guardarAudioPrivado(String remitente, byte[] audioData, int seqNum, int totalPaquetes) {
         // Crear una clave única para este audio específico
         String claveAudio = remitente + "_audio_" + System.currentTimeMillis();
@@ -550,7 +545,7 @@ public class Cliente {
             audiosPrivadosRecibidos.put(claveAudio, nuevaLista);
             remitentesAudiosPrivados.put(claveAudio, remitente);
             System.out
-                    .println("🎙️ Nuevo audio privado iniciado de " + remitente + " (" + totalPaquetes + " paquetes)");
+                    .println("Nuevo audio privado iniciado de " + remitente + " (" + totalPaquetes + " paquetes)");
         }
 
         List<byte[]> paquetesAudio = audiosPrivadosRecibidos.get(claveAudio);
@@ -571,12 +566,13 @@ public class Cliente {
             }
         }
 
-        System.out.println("📦 Audio de " + remitente + " [Paquete " + (seqNum + 1) + "/" + totalPaquetes +
-                "] - Progreso: " + paquetesRecibidos + "/" + totalPaquetes);
+        // System.out.println("Audio de " + remitente + " [Paquete " + (seqNum + 1) +
+        // "/" + totalPaquetes +
+        // "] - Progreso: " + paquetesRecibidos + "/" + totalPaquetes);
 
         // Verificar si el audio está completo
         if (paquetesRecibidos >= totalPaquetes && paquetesRecibidos == paquetesAudio.size()) {
-            System.out.println("✅ AUDIO COMPLETO de " + remitente + " - Listo para reproducir");
+            System.out.println("AUDIO COMPLETO de " + remitente + " - Listo para reproducir");
             System.out.println("   Usa #escucharAudios para ver y #reproducir_audio <numero> para escuchar");
         }
     }
@@ -608,7 +604,7 @@ public class Cliente {
         }
 
         if (audiosCompletos.isEmpty()) {
-            System.out.println("📭 No hay audios privados COMPLETOS pendientes");
+            System.out.println("No hay audios privados COMPLETOS pendientes");
             // Mostrar audios en progreso
             int audiosEnProgreso = 0;
             for (List<byte[]> paquetes : audiosPrivadosRecibidos.values()) {
@@ -617,7 +613,7 @@ public class Cliente {
                 }
             }
             if (audiosEnProgreso > 0) {
-                System.out.println("   📥 " + audiosEnProgreso + " audios en progreso...");
+                System.out.println(audiosEnProgreso + " audios en progreso...");
             }
             return;
         }
@@ -708,8 +704,6 @@ public class Cliente {
         remitentesAudiosPrivados.clear();
         System.out.println(cantidad + " audios privados eliminados");
     }
-
-    // ========== MÉTODOS EXISTENTES DEL CHAT ==========
 
     public void joinSala(String nomSala) {
         señalServidor("entrar:" + usuario + ":" + nomSala + ":");
@@ -805,7 +799,7 @@ public class Cliente {
                 } else {
                     // AUDIO PÚBLICO: Reproducir inmediatamente
                     if (room.equals(sala)) {
-                        System.out.println("Audio de " + sender);
+                        // System.out.println("Audio de " + sender);
                         reproducirAudioInmediato(audioData);
                     }
                 }
@@ -861,6 +855,11 @@ public class Cliente {
                 break;
             case "PRIVATE":
                 System.out.println("PRIVADO " + sender + ": " + content);
+                break;
+            case "EXIT":
+                System.out.println("\n*** " + sender + " has salido del servidor. Vuele pronto!! ***");
+                socket.close();
+                System.exit(0);
                 break;
             default:
                 System.out.println("Mensaje desconocido: " + mensaje);
