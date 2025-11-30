@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "ServidorHTTP",
+            "request": "launch",
+            "mainClass": "Practica4.ServidorHTTP",
+            "projectName": "Practicas-redes-2_3d8d17ba"
+        },
+        {
+            "type": "java",
             "name": "ChatClient",
             "request": "launch",
             "mainClass": "Practica3.ChatClient",
